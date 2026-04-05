@@ -3,13 +3,15 @@ name: Scam Detection RL Environment
 
 description: Multi-level scam detection with difficulty levels
 
-entrypoint: env.scam_env:ScamEnv
+entrypoint: env:ScamEnv
 
 tasks:
   - id: easy
     description: Detect obvious scams
+
   - id: medium
     description: Detect moderate scams
+
   - id: hard
     description: Detect advanced scams
 
@@ -26,6 +28,5 @@ observation_space:
 action_space:
   type: string
   enum: ["scam", "safe"]
-
 
 max_steps: 6

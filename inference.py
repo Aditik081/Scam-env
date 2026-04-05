@@ -1,7 +1,6 @@
 import os
 from openai import OpenAI
-from env.env import ScamEnv
-from env.env import normal_agent   # 🔥 fallback
+from env import ScamEnv, normal_agent    # 🔥 fallback
 
 # Required env variables
 API_BASE_URL = os.getenv("API_BASE_URL")
@@ -9,13 +8,19 @@ API_KEY = os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")
 
 # Initialize client
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=API_KEY
-)
+client = None
 
+if API_BASE_URL and API_KEY and MODEL_NAME:
+    client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=API_KEY
+    )
 
 def get_prediction(text):
+
+    if client is None:
+        return normal_agent(text)
+        
     prompt = f"""
 You are a scam detection system.
 
@@ -81,7 +86,7 @@ def run_episode(env):
 def main():
     env = ScamEnv()
 
-    episodes = 20   # 🔥 more stable score
+    episodes = 20  # 🔥 more stable score
     total_reward = 0
     total_steps = 0
 
