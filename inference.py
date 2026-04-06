@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from openai import OpenAI
 # Yahan 'env' file se sahi classes import karein
 from env import normal_agent, ScamEnv 
@@ -42,7 +43,7 @@ def run_episode(env):
 
     while not done and steps < 100: # Safety break
         text = obs["text"]
-        # Yahan 'predict' call karein, 'get_prediction' nahi
+        # Yahan 'predict' call karein
         prediction = predict(text) if len(text) >= 25 else normal_agent(text)
         
         obs, reward, done, _ = env.step(prediction)
@@ -66,10 +67,15 @@ def main():
         avg_reward = total_reward / total_steps if total_steps > 0 else 0
         print("END")
         print(round(avg_reward, 4))
+        
+        # Zaroori: Script ko thodi der "Running" state mein rakhne ke liye
+        print("SUCCESS: Result generated. Waiting for Scaler to scan...")
+        time.sleep(300) # 5 minute sleep
+        
     except Exception as e:
         print(f"ERROR: {e}")
+        time.sleep(60) # Error ke case mein bhi thoda wait
     
-    # Force exit taaki platform ko signal mile ki kaam khatam ho gaya
     sys.exit(0)
 
 if __name__ == "__main__":
