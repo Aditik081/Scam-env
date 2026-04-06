@@ -1,10 +1,10 @@
 import os
 from openai import OpenAI
-from env import ScamEnv, normal_agent    # 🔥 fallback
+from env import ScamEnv, normal_agent    #  fallback
 
 # Required env variables
 API_BASE_URL = os.getenv("API_BASE_URL")
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("OPENAI_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN") 
 MODEL_NAME = os.getenv("MODEL_NAME")
 
 # Initialize client
@@ -13,7 +13,7 @@ client = None
 if API_BASE_URL and API_KEY and MODEL_NAME:
     client = OpenAI(
         base_url=API_BASE_URL,
-        api_key=API_KEY
+        api_key=HF_TOKEN
     )
 
 def get_prediction(text):
@@ -69,7 +69,7 @@ def run_episode(env):
     while not done:
         text = obs["text"]
 
-        # 🔥 short text → better handled by rules
+        # short text → better handled by rules
         if len(text) < 25:
             prediction = normal_agent(text)
         else:
@@ -84,20 +84,24 @@ def run_episode(env):
 
 
 def main():
+    print("START")
+
     env = ScamEnv()
 
-    episodes = 20  # 🔥 more stable score
+    episodes = 20  # more stable score
     total_reward = 0
     total_steps = 0
 
     for _ in range(episodes):
+        print("STEP")
         ep_reward, ep_steps = run_episode(env)
         total_reward += ep_reward
         total_steps += ep_steps
 
     avg_reward = total_reward / total_steps if total_steps > 0 else 0
 
-    # ✅ ONLY output (important for submission)
+    # ONLY output (important for submission)
+    print("END")
     print(round(avg_reward, 4))
 
 
