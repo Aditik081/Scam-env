@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-openenv-server = "inference:app"
+openenv-server = "server.app:main"
 
 [build-system]
 requires = ["hatchling"]
