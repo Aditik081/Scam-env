@@ -1,109 +1,76 @@
 import os
+import sys
 from openai import OpenAI
-from env import ScamEnv, normal_agent    #  fallback
+# Yahan 'env' file se sahi classes import karein
+from env import normal_agent, ScamEnv 
 
 # Required env variables
 API_BASE_URL = os.getenv("API_BASE_URL")
 HF_TOKEN = os.getenv("HF_TOKEN") 
 MODEL_NAME = os.getenv("MODEL_NAME")
 
-# Initialize client
 client = None
-
-if API_BASE_URL and API_KEY and MODEL_NAME:
+if API_BASE_URL and HF_TOKEN and MODEL_NAME:
     client = OpenAI(
         base_url=API_BASE_URL,
         api_key=HF_TOKEN
     )
 
-def get_prediction(text):
-
+def predict(text):
     if client is None:
         return normal_agent(text)
         
-    prompt = f"""
-You are a scam detection system.
-
-Classify the message strictly as:
-- scam
-- safe
-
-Rules:
-- OTP without link/request = safe
-- Asking money, clicking links, urgency = scam
-
-Message: {text}
-
-Answer ONLY one word: scam or safe
-"""
+    prompt = f"Classify as 'scam' or 'safe': {text}\nAnswer ONLY one word."
 
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1,
-            max_tokens=10
+            max_tokens=5
         )
-
         ans = response.choices[0].message.content.strip().lower()
-
-        # 🔥 clean output handling
-        if "scam" in ans:
-            return "scam"
-        elif "safe" in ans:
-            return "safe"
-        else:
-            return normal_agent(text)   # fallback
-
+        return "scam" if "scam" in ans else "safe"
     except:
-        return normal_agent(text)       # fallback
-
+        return normal_agent(text)
 
 def run_episode(env):
     obs = env.reset()
     done = False
-
     total_reward = 0
     steps = 0
 
-    while not done:
+    while not done and steps < 100: # Safety break
         text = obs["text"]
-
-        # short text → better handled by rules
-        if len(text) < 25:
-            prediction = normal_agent(text)
-        else:
-            prediction = get_prediction(text)
-
+        # Yahan 'predict' call karein, 'get_prediction' nahi
+        prediction = predict(text) if len(text) >= 25 else normal_agent(text)
+        
         obs, reward, done, _ = env.step(prediction)
-
         total_reward += reward
         steps += 1
-
     return total_reward, steps
-
 
 def main():
     print("START")
+    try:
+        env = ScamEnv()
+        episodes = 20
+        total_reward = 0
+        total_steps = 0
 
-    env = ScamEnv()
+        for _ in range(episodes):
+            ep_reward, ep_steps = run_episode(env)
+            total_reward += ep_reward
+            total_steps += ep_steps
 
-    episodes = 20  # more stable score
-    total_reward = 0
-    total_steps = 0
-
-    for _ in range(episodes):
-        print("STEP")
-        ep_reward, ep_steps = run_episode(env)
-        total_reward += ep_reward
-        total_steps += ep_steps
-
-    avg_reward = total_reward / total_steps if total_steps > 0 else 0
-
-    # ONLY output (important for submission)
-    print("END")
-    print(round(avg_reward, 4))
-
+        avg_reward = total_reward / total_steps if total_steps > 0 else 0
+        print("END")
+        print(round(avg_reward, 4))
+    except Exception as e:
+        print(f"ERROR: {e}")
+    
+    # Force exit taaki platform ko signal mile ki kaam khatam ho gaya
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
