@@ -1,9 +1,13 @@
 import os
 import sys
 import time
+from fastapi import FastAPI
+from pydantic import BaseModel
 from openai import OpenAI
-# Yahan 'env' file se sahi classes import karein
-from env import normal_agent, ScamEnv 
+from env import normal_agent, ScamEnv
+
+# FastAPI app initialize karein (Scaler ko response chahiye hota hai)
+app = FastAPI()
 
 # Required env variables
 API_BASE_URL = os.getenv("API_BASE_URL")
@@ -41,16 +45,26 @@ def run_episode(env):
     total_reward = 0
     steps = 0
 
-    while not done and steps < 100: # Safety break
+    while not done and steps < 100:
         text = obs["text"]
-        # Yahan 'predict' call karein
         prediction = predict(text) if len(text) >= 25 else normal_agent(text)
-        
         obs, reward, done, _ = env.step(prediction)
         total_reward += reward
         steps += 1
     return total_reward, steps
 
+# --- SCALER SPECIFIC ENDPOINTS ---
+
+@app.get("/")
+def health():
+    return {"status": "running"}
+
+@app.post("/reset")
+def reset_env():
+    # Scaler jab 'reset()' call karega, hum usey 200 OK bhejenge
+    return {"status": "success", "message": "Environment Reset"}
+
+@app.get("/run_task")
 def main():
     print("START")
     try:
@@ -67,16 +81,12 @@ def main():
         avg_reward = total_reward / total_steps if total_steps > 0 else 0
         print("END")
         print(round(avg_reward, 4))
-        
-        # Zaroori: Script ko thodi der "Running" state mein rakhne ke liye
-        print("SUCCESS: Result generated. Waiting for Scaler to scan...")
-        time.sleep(300) # 5 minute sleep
-        
+        return {"score": round(avg_reward, 4), "status": "END"}
     except Exception as e:
         print(f"ERROR: {e}")
-        time.sleep(60) # Error ke case mein bhi thoda wait
-    
-    sys.exit(0)
+        return {"error": str(e)}
 
 if __name__ == "__main__":
-    main()
+    import uvicorn
+    # Hugging Face default port 7860 use karta hai
+    uvicorn.run(app, host="0.0.0.0", port=7860)

@@ -191,4 +191,7 @@ Developed as part of an OpenEnv-based AI evaluation system for real-world proble
 * Meaningful reward shaping
 * Fully reproducible baseline
 
+## 🔗 Live Demo
+Hugging Face Space: https://huggingface.co/spaces/aditik08/hackathon
+
 
