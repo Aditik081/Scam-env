@@ -1,16 +1,18 @@
-# Use a supported Python version
-FROM python:3.11-slim
+# Use stable base image
+FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy all files
+# Copy files
 COPY . .
 
-# Upgrade pip and install required packages
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+# Install dependencies
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
+# Expose port (HF uses 7860)
+EXPOSE 7860
 
-# Run the script
-CMD ["python", "inference.py"]
+# Start server
+CMD ["python", "server/app.py"]

@@ -104,8 +104,3 @@ def main():
     print(round(avg_reward, 4))
 
 
-# Run server (HF Space ke liye)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
