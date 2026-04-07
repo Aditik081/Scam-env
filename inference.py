@@ -12,30 +12,35 @@ API_KEY = os.getenv("API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME")
 
 # -------- OPENAI CLIENT --------
-client = None
-if API_BASE_URL and API_KEY and MODEL_NAME:
+try:
     client = OpenAI(
-        base_url=API_BASE_URL,
-        api_key=API_KEY
+        base_url=os.environ["API_BASE_URL"],
+        api_key=os.environ["API_KEY"]
     )
+    MODEL_NAME = os.environ["MODEL_NAME"]
+except Exception as e:
+    print(f"[ERROR] Env issue: {e}", flush=True)
+    client = None
+    MODEL_NAME = None
 
 # -------- PREDICTION FUNCTION --------
 def predict(text):
     prompt = f"Classify as 'scam' or 'safe': {text}\nAnswer ONLY one word."
 
-    # Try API call first (important for validator)
-    if client:
-        try:
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.1,
-                max_tokens=5
-            )
-            ans = response.choices[0].message.content.strip().lower()
-            return "scam" if "scam" in ans else "safe"
-        except Exception as e:
-            print(f"[ERROR] API failed: {e}", flush=True)
+    try:
+        # 🔥 ALWAYS attempt API call
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=5
+        )
+        ans = response.choices[0].message.content.strip().lower()
+        return "scam" if "scam" in ans else "safe"
+
+    except Exception as e:
+        print(f"[ERROR] API failed: {e}", flush=True)
+        return "safe"
 
     # fallback (no crash)
     return "safe"
