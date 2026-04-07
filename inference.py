@@ -104,3 +104,5 @@ def main():
     print(round(avg_reward, 4))
 
 
+if __name__ == "__main__":
+    main()
