@@ -8,14 +8,14 @@ app = FastAPI()
 
 # Env variables
 API_BASE_URL = os.getenv("API_BASE_URL")
-HF_TOKEN = os.getenv("HF_TOKEN")
+API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
 MODEL_NAME = os.getenv("MODEL_NAME")
 
 client = None
-if API_BASE_URL and HF_TOKEN and MODEL_NAME:
+if API_BASE_URL and API_KEY and MODEL_NAME:
     client = OpenAI(
         base_url=API_BASE_URL,
-        api_key=HF_TOKEN
+        api_key=API_KEY
     )
 
 
@@ -106,7 +106,7 @@ def main():
 
     avg_reward = total_reward / total_steps if total_steps > 0 else 0
 
-    print(f"[END] task=scam-detection score={round(avg_reward,4)} steps={total_steps}", flush=True)
+    print(f"[END] task=scam-detection score={round(avg_reward,4)} steps={episodes}", flush=True)
 
 if __name__ == "__main__":
     main()
