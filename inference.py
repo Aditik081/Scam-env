@@ -95,14 +95,20 @@ def main():
     total_reward = 0
     total_steps = 0
 
-    for _ in range(episodes):
+    print("[START] task=scam-detection", flush=True)
+
+    for i in range(episodes):
         ep_reward, ep_steps = run_episode(env)
         total_reward += ep_reward
         total_steps += ep_steps
 
-    avg_reward = total_reward / total_steps if total_steps > 0 else 0
-    print(round(avg_reward, 4))
+        print(f"[STEP] step={i+1} reward={ep_reward}", flush=True)
 
+    avg_reward = total_reward / total_steps if total_steps > 0 else 0
+
+    print(f"[END] task=scam-detection score={round(avg_reward,4)} steps={total_steps}", flush=True)
 
 if __name__ == "__main__":
     main()
+
+
