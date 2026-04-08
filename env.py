@@ -11,7 +11,7 @@ class ScamEnv:
         self.current_step = 0
         self.max_steps = 6
 
-        # 🔥 USE EASY / MEDIUM / HARD TASKS (validator requirement)
+        # EASY / MEDIUM / HARD TASKS
         self.data = [
             # -------- EASY --------
             {"text": "your package will arrive by 8pm", "actual": "safe", "task": "easy"},
@@ -38,13 +38,11 @@ class ScamEnv:
     def reset(self, task=None):
         self.current_step = 0
 
-        # 🔥 select task properly
         if task is None:
             self.current_task = random.choice(["easy", "medium", "hard"])
         else:
             self.current_task = task
 
-        # 🔥 filter by task (FIXED)
         for_task = [x for x in self.data if x["task"] == self.current_task]
         self.current_data = random.choice(for_task)
 
@@ -60,18 +58,13 @@ class ScamEnv:
 
         correct_actual = self.current_data["actual"]
 
-        # 🔥 VALID REWARD (0–1)
-        if prediction == correct_actual:
-            reward = 1.0
-        else:
-            reward = 0.0
+        # reward (0–1)
+        reward = 1.0 if prediction == correct_actual else 0.0
 
-        # 🔥 end condition
         if self.current_step >= self.max_steps:
             done = True
-            return {}, reward, done, {}
 
-        # 🔥 next sample from same task
+        # next sample
         for_task = [x for x in self.data if x["task"] == self.current_task]
         self.current_data = random.choice(for_task)
 
@@ -80,7 +73,11 @@ class ScamEnv:
             "task": self.current_task
         }
 
-        return observation, reward, done, {}
+        info = {
+            "actual": correct_actual   # 🔥 REQUIRED FOR GRADER
+        }
+
+        return observation, reward, done, info
 
     def state(self):
         return {

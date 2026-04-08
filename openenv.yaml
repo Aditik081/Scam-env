@@ -6,27 +6,16 @@ entrypoint: env:ScamEnv
 tasks:
   - id: easy
     description: Easy scam detection
-    grader:
-      type: rule
-      field: action
-      operator: equals_field
-      target_field: actual
+    grader: grader:easy_grader
 
   - id: medium
     description: Medium scam detection
-    grader:
-      type: rule
-      field: action
-      operator: equals_field
-      target_field: actual
+    grader: grader:medium_grader
 
   - id: hard
     description: Hard scam detection
-    grader:
-      type: rule
-      field: action
-      operator: equals_field
-      target_field: actual
+    grader: grader:hard_grader
+    
 
 observation_space:
   type: object
