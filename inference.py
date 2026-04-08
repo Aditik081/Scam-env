@@ -110,6 +110,4 @@ def main():
     run_task_endpoint()
 
 if __name__ == "__main__":
-    import uvicorn
-    # Validator often runs uvicorn directly, but this is a safeguard
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+   main()
