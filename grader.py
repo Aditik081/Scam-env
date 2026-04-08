@@ -1,13 +1,15 @@
-def easy_grader(action, observation, info):
-    actual = info.get("actual")
-    return 0.95 if action == actual else 0.05
+class ScamGrader:
 
+    def easy(self, action, observation, info):
+        actual = info.get("actual")
+        return 1.0 if action == actual else 0.0
 
-def medium_grader(action, observation, info):
-    actual = info.get("actual")
-    return 0.95 if action == actual else 0.35
+    def medium(self, action, observation, info):
+        actual = info.get("actual")
+        if action == actual:
+            return 1.0
+        return 0.5
 
-
-def hard_grader(action, observation, info):
-    actual = info.get("actual")
-    return 0.95 if action == actual else 0.05
+    def hard(self, action, observation, info):
+        actual = info.get("actual")
+        return 1.0 if action == actual else 0.0

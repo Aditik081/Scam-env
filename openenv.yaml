@@ -9,20 +9,20 @@ tasks:
   - id: easy
     description: Detect obvious scams
     grader:
-      type: python
-      path: grader.easy_grader
+      entrypoint: grader:ScamGrader
+      method: easy
 
   - id: medium
     description: Detect moderate scams
     grader:
-      type: python
-      path: grader.medium_grader
+      entrypoint: grader:ScamGrader
+      method: medium
 
   - id: hard
     description: Detect advanced scams
     grader:
-      type: python
-      path: grader.hard_grader
+      entrypoint: grader:ScamGrader
+      method: hard
 
 observation_space:
   type: object
