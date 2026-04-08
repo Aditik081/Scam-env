@@ -1,11 +1,14 @@
-def grade(task_id, prediction, ground_truth):
+def easy_grader(prediction, actual):
+    return 1.0 if prediction == actual else 0.0
 
-    # correct prediction
-    if prediction == ground_truth:
+
+def medium_grader(prediction, actual):
+    if prediction == actual:
         return 1.0
+    return 0.5  # partial reward
 
-    # partial credit for hard tasks
-    if task_id == "hard":
-        return 0.3
 
+def hard_grader(prediction, actual):
+    if prediction == actual:
+        return 1.0
     return 0.0
