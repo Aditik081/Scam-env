@@ -16,13 +16,13 @@ tasks:
     description: Detect moderate scams
     grader:
       type: python
-      path: grader.easy_grader
+      path: grader.medium_grader
 
   - id: hard
     description: Detect advanced scams
     grader:
       type: python
-      path: grader.easy_grader
+      path: grader.hard_grader
 
 observation_space:
   type: object

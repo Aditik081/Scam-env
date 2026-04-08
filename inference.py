@@ -68,7 +68,7 @@ def reset_env():
     return {"status": "success"}
 
 @app.get("/run_task")
-def run_task_endpoint(task_id: str = "scam-detection"): # 👈 Parameter added
+def run_task_endpoint(task_id: str = "easy"): # 👈 Parameter added
     # 1. Start log with dynamic task_id
     print(f"[START] task={task_id}", flush=True)
     
@@ -81,7 +81,7 @@ def run_task_endpoint(task_id: str = "scam-detection"): # 👈 Parameter added
 
         env = ScamEnv()
         total_reward = 0
-        steps = 20 # Validator typically expects 20 steps
+        steps = 6 # Validator typically expects 20 steps
 
         for i in range(steps):
             obs = env.reset() # Simplified for 3-task validation
@@ -105,7 +105,7 @@ def run_task_endpoint(task_id: str = "scam-detection"): # 👈 Parameter added
         return {"score": 0.5, "status": "END", "task_id": task_id}
 # -------- CLI ENTRY --------
 def main():
-    run_task_endpoint()
+    run_task_endpoint(task_id="easy")
 
 if __name__ == "__main__":
     main()
