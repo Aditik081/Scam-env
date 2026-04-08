@@ -1,21 +1,28 @@
 id: scam-detection-env
 name: Scam Detection RL Environment
 
+description: Multi-level scam detection with difficulty levels
+
 entrypoint: env:ScamEnv
 
 tasks:
   - id: easy
-    description: Easy scam detection
-    grader: grader:easy_grader
+    description: Detect obvious scams
+    grader:
+      entrypoint: grader:ScamGrader
+      method: easy
 
   - id: medium
-    description: Medium scam detection
-    grader: grader:medium_grader
+    description: Detect moderate scams
+    grader:
+      entrypoint: grader:ScamGrader
+      method: medium
 
   - id: hard
-    description: Hard scam detection
-    grader: grader:hard_grader
-    
+    description: Detect advanced scams
+    grader:
+      entrypoint: grader:ScamGrader
+      method: hard
 
 observation_space:
   type: object
@@ -23,7 +30,7 @@ observation_space:
     text:
       type: string
     task:
-      type: string   # 🔥 add this (important)
+      type: string
 
 action_space:
   type: string

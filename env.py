@@ -73,9 +73,7 @@ class ScamEnv:
             "task": self.current_task
         }
 
-        info = {
-            "actual": correct_actual   # 🔥 REQUIRED FOR GRADER
-        }
+        info = {"actual": correct_actual}
 
         return observation, reward, done, info
 
