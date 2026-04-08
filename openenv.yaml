@@ -8,12 +8,15 @@ entrypoint: env:ScamEnv
 tasks:
   - id: easy
     description: Detect obvious scams
+    grader: grade:grade
 
   - id: medium
     description: Detect moderate scams
+    grader: grade:grade
 
   - id: hard
     description: Detect advanced scams
+    grader: grade:grade
 
 observation_space:
   type: object
