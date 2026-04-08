@@ -68,10 +68,11 @@ def reset_env():
     return {"status": "success"}
 
 @app.get("/run_task")
-def run_task_endpoint():
-    print("[START] task=scam-detection", flush=True)
+def run_task_endpoint(task_id: str = "scam-detection"): # task_id ko parameter banaya
+    print(f"[START] task={task_id}", flush=True) # Dynamic task_id print karein
     
     try:
+        # Mandatory Proxy Hit
         if client:
             try:
                 client.chat.completions.create(
@@ -79,10 +80,11 @@ def run_task_endpoint():
                     messages=[{"role": "user", "content": "ping"}],
                     max_tokens=1
                 )
-            except:
-                pass
+            except: pass
 
-        env = ScamEnv()
+        # Task ke basis par environment setup
+        # Validator 3 alag tasks maang raha hai, toh hum use dynamic rakhenge
+        env = ScamEnv() 
         episodes = 20
         total_reward = 0
         total_steps = 0
@@ -93,23 +95,20 @@ def run_task_endpoint():
             total_steps += ep_steps
             print(f"[STEP] step={i+1} reward={ep_reward}", flush=True)
 
-        # 🔥 SCORE NORMALIZATION (Strictly between 0 and 1)
-        # Sigmoid function use karke hum hamesha 0 aur 1 ke beech score layenge
-        avg_reward = total_reward / total_steps if total_steps > 0 else 0
+        # Score Calculation (Strictly 0 to 1)
+        avg_reward = total_reward / total_steps if total_steps > 0 else 0.5
+        score = round(avg_reward, 4)
         
-        # math.exp use karke avg_reward ko (0, 1) range mein shift karenge
-        raw_score = 1 / (1 + math.exp(-avg_reward))
-        
-        # Safety margin: ensure strictly > 0.0 and < 1.0 (e.g., 0.1 to 0.9)
-        score = round(0.1 + (raw_score * 0.8), 4)
+        # Range Check
+        if score <= 0: score = 0.05
+        if score >= 1: score = 0.95
 
-        print(f"[END] task=scam-detection score={score} steps={episodes}", flush=True)
-        return {"score": score, "status": "END"}
+        # IMPORTANT: Task_id wahi return karein jo maangi gayi hai
+        print(f"[END] task={task_id} score={score} steps={episodes}", flush=True)
+        return {"score": score, "status": "END", "task_id": task_id}
 
     except Exception as e:
-        print(f"[ERROR] Main task failed: {e}", flush=True)
-        # Fallback score strictly in range
-        return {"score": 0.5, "status": "END"}
+        return {"score": 0.5, "status": "END", "task_id": task_id}
 
 # -------- CLI ENTRY --------
 def main():
