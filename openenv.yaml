@@ -1,41 +1,33 @@
 id: scam-detection-env
 name: Scam Detection RL Environment
 
-description: Multi-level scam detection with difficulty levels
+description: Multi-task scam detection (scam, phishing, spam)
 
 entrypoint: env:ScamEnv
 
 tasks:
-  - id: easy
-    description: Detect obvious scams
+  - id: scam_detection
+    description: Detect general scams
     grader:
-      type: rule
-      field: action
-      equals: scam
+      type: match
 
-  - id: medium
-    description: Detect moderate scams
+  - id: phishing_detection
+    description: Detect phishing messages
     grader:
-      type: rule
-      field: action
-      equals: scam
+      type: match
 
-  - id: hard
-    description: Detect advanced scams
+  - id: spam_detection
+    description: Detect spam/fraud messages
     grader:
-      type: rule
-      field: action
-      equals: scam
+      type: match
 
 observation_space:
   type: object
   properties:
     text:
       type: string
-    has_link:
-      type: boolean
-    has_urgent_words:
-      type: boolean
+    task:
+      type: string
 
 action_space:
   type: string

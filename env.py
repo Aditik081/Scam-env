@@ -7,134 +7,87 @@ random.seed()
 class ScamEnv:
 
     def __init__(self):
-       
 
-        #step tracking
         self.current_step = 0
         self.max_steps = 6
 
-        self.data=[
-            {"text":"your package with delivery id-10976 arrive by 8pm", "actual":"safe","level":"easy"},
-            {"text":"Woah! you won you won $1000 lottery for claiming it click the link below","actual":"scam","level":"easy"},
-            {"text":"You are selected for internship first join the session time is given below","actual":"scam","level":"medium"},
-            {"text":"Hi your electricity bill of $10, Avoid if you lready paid", "actual":"safe","level":"easy"},
-            {"text":"complete your bank details using link","actual":"scam","level":"medium"},
-            {"text":"Update your KYC immediately or your account will suspended","actual":"scam","level":"hard"},
-            {"text":"your otp is 4578, do not share with anyone","actual":"safe","level":"easy"},
-            {"text":"Message from Unknown number of family and relative asking money","actual":"scam","level":"hard"},
-            {"text":"Dear Candidate you have selected for offer letter pay 299 and we refund it after you receive it.","actual":"scam","level":"hard"},
-            {"text":"Our records show you overpaid for (a product or service). Kindly supply your bank routing and account number to receive your refund.","actual":"scam","level":"hard"},
-            {"text":"Urgent Your grandson was arrested last night in mexico. Need Bail money immediately to State Police ","actual":"scam","level":"hard"},
-            {"text":"Congratulations! You've won the Walmart Gift card of $1000 go to link to claim now.","actual":"scam","level":"medium"},
-            
+        #  GROUPED INTO 3 TASKS
+        self.data = [
+            # -------- SCAM DETECTION --------
+            {"text": "your package with delivery id-10976 arrive by 8pm", "actual": "safe", "task": "scam_detection"},
+            {"text": "Woah! you won $1000 lottery click link", "actual": "scam", "task": "scam_detection"},
+            {"text": "You are selected for internship join session", "actual": "scam", "task": "scam_detection"},
+            {"text": "Hi your electricity bill of $10, ignore if paid", "actual": "safe", "task": "scam_detection"},
 
+            # -------- PHISHING DETECTION --------
+            {"text": "complete your bank details using link", "actual": "scam", "task": "phishing_detection"},
+            {"text": "Update your KYC immediately or account suspended", "actual": "scam", "task": "phishing_detection"},
+            {"text": "Overpaid, share bank details for refund", "actual": "scam", "task": "phishing_detection"},
+            {"text": "your otp is 4578, do not share", "actual": "safe", "task": "phishing_detection"},
 
+            # -------- SPAM DETECTION --------
+            {"text": "Unknown number asking money", "actual": "scam", "task": "spam_detection"},
+            {"text": "Pay 299 for offer letter refund later", "actual": "scam", "task": "spam_detection"},
+            {"text": "Grandson arrested, need bail money urgent", "actual": "scam", "task": "spam_detection"},
+            {"text": "Won Walmart gift card claim now", "actual": "scam", "task": "spam_detection"},
         ]
 
         self.current_data = None
+        self.current_task = None
 
-    def reset(self,level=None):
-        self.current_step=0  #new game come to 0
-        if level is None:
-            level = random.choice(["easy","medium","hard"])
+    def reset(self, task=None):
+        self.current_step = 0
 
-        for_level = [x for x in self.data if x["level"]==level]
-        self.current_data = random.choice(for_level)
+        #  PICK TASK (IMPORTANT)
+        if task is None:
+            self.current_task = random.choice([
+                "scam_detection",
+                "phishing_detection",
+                "spam_detection"
+            ])
+        else:
+            self.current_task = task
 
+        # pick data from that task
+        for_task = [x for x in self.data if x["task"] == self.current_task]
+        self.current_data = random.choice(for_task)
 
-        
-        
         return {
             "text": self.current_data["text"],
-            "has_link": "link" in self.current_data["text"].lower(),
-            "has_urgent_words": "urgent" in self.current_data["text"].lower()
-}
+            "task": self.current_task
+        }
 
-    def step(self, prediction:str)->Tuple[Dict,float,bool,Dict]:
-        
+    def step(self, prediction: str) -> Tuple[Dict, float, bool, Dict]:
+
         self.current_step += 1
         done = False
 
         correct_actual = self.current_data["actual"]
-        
+
+        #  GRADER (important for validator)
         if prediction == correct_actual:
-            if self.current_data["level"] == "easy":
-                reward = 0.6
-            elif self.current_data["level"]=="medium":
-                reward = 0.8
-            else:
-                reward = 1.0
-        else: 
-            if self.current_data["level"] == "easy":
-                reward = -0.2
-            elif self.current_data["level"] == "medium":
-                reward = -0.4
-            else:
-                reward = -0.6
+            reward = 1.0
+        else:
+            reward = -0.5
 
         if self.current_step >= self.max_steps:
             done = True
             return {}, reward, done, {}
-        else:
-           for_level = [x for x in self.data if x["level"] == self.current_data["level"]]
-           self.current_data = random.choice(for_level)
-    
-        observation ={
+
+        # next sample from same task
+        for_task = [x for x in self.data if x["task"] == self.current_task]
+        self.current_data = random.choice(for_task)
+
+        observation = {
             "text": self.current_data["text"],
-            "has_link": "link" in self.current_data["text"].lower(),
-            "has_urgent_words": "urgent" in self.current_data["text"].lower()
+            "task": self.current_task
         }
 
-        info = {}
-
-        return observation, reward, done, info
+        return observation, reward, done, {}
 
     def state(self):
-        return{
+        return {
             "step": self.current_step,
-            "max_steps":self.max_steps,
-            "current_text": self.current_data["text"] if self.current_data else None
-            
+            "task": self.current_task,
+            "text": self.current_data["text"] if self.current_data else None
         }
-
-def normal_agent(text):
-    text = text.lower()
-
-    if "otp" in text:
-        if "link" in text or "click" in text or "pay" in text:
-            return "scam"
-        return "safe"
-
-    scam_keywords = [
-        "lottery", "kyc", "win",
-        "urgent", "money", "click", "link",
-        "suspended", "bank", "verify",
-        "pay", "offer", "selected", "prize",
-        "gift", "claim", "reward"
-    ]
-
-    for word in scam_keywords:
-        if word in text :
-            return "scam"
-
-    if "pay" in text and ("offer" in text or "job" in text):
-        return "scam"
-            
-    
-    return "safe"
-
-
-
-if __name__ == "__main__":
-    env = ScamEnv()
-    obs = env.reset()
-    done = False
-
-    while not done:
-        text = obs["text"]
-        prediction = normal_agent(text)
-        obs, reward, done, _ = env.step(prediction)
-   
-
-  
-
