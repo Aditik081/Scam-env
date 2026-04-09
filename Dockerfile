@@ -15,4 +15,4 @@ RUN pip install --no-cache-dir --upgrade pip \
 EXPOSE 7860
 
 # Start server
-CMD ["python", "server/app.py"]
+CMD ["uvicorn", "inference:app", "--host", "0.0.0.0", "--port", "7860"]
