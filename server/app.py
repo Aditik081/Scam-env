@@ -11,6 +11,10 @@ app = FastAPI()
 def health():
     return {"status": "running"}
 
+@app.post("/reset")          # ← yeh missing tha!
+def reset():
+    return {"status": "ok"}
+
 @app.get("/run")
 def run_inference():
     import subprocess
