@@ -23,6 +23,10 @@ except Exception as e:
 
 # -------- PROXY CHECK (REQUIRED) --------
 def proxy_check():
+    if client is None:
+        print("[WARN] client not initialized", flush=True)
+        return
+
     try:
         client.chat.completions.create(
             model=MODEL_NAME,
@@ -32,7 +36,6 @@ def proxy_check():
         print("[INFO] Proxy call success", flush=True)
     except Exception as e:
         print(f"[ERROR] proxy failed: {e}", flush=True)
-
 
 # -------- TASK-AWARE PREDICT FUNCTION --------
 def predict(text, task="easy"):
