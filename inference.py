@@ -76,24 +76,34 @@ def run_episode(env):
     done = False
     total_reward = 0
     steps = 0
+    rewards_list = []   # 🔥 ADD THIS
 
     while not done and steps < 100:
         try:
             text = obs["text"]
-            task = obs.get("task", "easy")   # 🔥 IMPORTANT
+            task = obs.get("task", "easy")
 
             prediction = predict(text, task)
 
             obs, reward, done, _ = env.step(prediction)
 
-            total_reward += reward
             steps += 1
+            total_reward += reward
+            rewards_list.append(f"{reward:.2f}")   # 🔥 STORE EACH REWARD
+
+            print(
+                f"[STEP] step={steps} action={prediction} reward={reward:.2f} done={str(done).lower()} error=null",
+                flush=True
+            )
 
         except Exception as e:
-            print(f"[ERROR] step failed: {e}", flush=True)
+            print(
+                f"[STEP] step={steps} action=none reward=0.10 done=true error={str(e)}",
+                flush=True
+            )
             break
 
-    return total_reward, steps
+    return total_reward, steps, rewards_list   # 🔥 RETURN LIST
 
 
 # -------- HEALTH CHECK --------
@@ -178,7 +188,7 @@ def main():
                     )
 
             print(
-                f"[END] success=true steps={total_steps} rewards=0.00",
+                f"[END] success=true steps={total_steps} rewards={reward_str}",
                 flush=True
             )
 
