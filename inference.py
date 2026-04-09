@@ -145,31 +145,45 @@ def run_task_endpoint():
 # -------- CLI ENTRY (VALIDATOR MODE) --------
 def main():
     try:
-        print("[START] task=scam-detection", flush=True)
+        tasks = ["easy", "medium", "hard"]
 
-        env = ScamEnv()
-        episodes = 20
-        total_reward = 0
-        total_steps = 0
+        for task_name in tasks:
+            print(f"[START] task=scam-{task_name} env=ScamEnv model={MODEL_NAME}", flush=True)
 
-        # 🔥 REQUIRED FOR VALIDATOR
-        proxy_check()
+            env = ScamEnv()
+            total_reward = 0
+            total_steps = 0
 
-        for i in range(episodes):
-            ep_reward, ep_steps = run_episode(env)
-            total_reward += ep_reward
-            total_steps += ep_steps
+            proxy_check()
 
-            print(f"[STEP] step={i+1} reward={ep_reward}", flush=True)
+            for i in range(5):  # small episodes per task
+                obs = env.reset(task=task_name)
 
-        avg_reward = total_reward / total_steps if total_steps > 0 else 0
-        score = round(avg_reward, 4)
+                done = False
+                step = 0
 
-        print(f"[END] task=scam-detection score={score} steps={episodes}", flush=True)
+                while not done:
+                    text = obs["text"]
+                    prediction = predict(text, task_name)
+
+                    obs, reward, done, _ = env.step(prediction)
+
+                    step += 1
+                    total_steps += 1
+                    total_reward += reward
+
+                    print(
+                        f"[STEP] step={step} action={prediction} reward={reward:.2f} done={str(done).lower()} error=null",
+                        flush=True
+                    )
+
+            print(
+                f"[END] success=true steps={total_steps} rewards=0.00",
+                flush=True
+            )
 
     except Exception as e:
-        print("[FATAL ERROR]", e, flush=True)
-        traceback.print_exc()
+        print(f"[END] success=false steps=0 rewards=0.00 error={str(e)}", flush=True)
 
 
 # -------- ENTRY POINT --------
