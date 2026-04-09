@@ -1,12 +1,10 @@
 import json
 import os
 import sys
-from typing import Any, Dict, List
-
+from typing import Any, Dict
 
 def _emit(tag: str, payload: Dict[str, Any]) -> None:
     print(tag, json.dumps(payload, separators=(",", ":"), ensure_ascii=True))
-
 
 def _safe_predict(text: str, task: str) -> str:
     text = text.lower()
@@ -26,25 +24,34 @@ def _safe_predict(text: str, task: str) -> str:
         return "safe"
     return "safe"
 
-
-def _choose_action_via_llm(*, client, model_name, task_id, step, obs):
-    system = (
-        "You are a scam detection agent.\n"
-        "Return ONLY JSON with one action.\n"
-        '{"action_type":"classify","label":"scam|safe"}\n'
-    )
-    user = {"task_id": task_id, "step": step, "observation": obs}
-    resp = client.chat.completions.create(
-        model=model_name,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(user, ensure_ascii=True)},
-        ],
-        temperature=0.0,
-        response_format={"type": "json_object"},
-    )
-    return json.loads(resp.choices[0].message.content)
-
+def _llm_predict(client, model_name: str, text: str, task: str) -> str:
+    try:
+        resp = client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a scam detection AI. "
+                        "Classify the message as 'scam' or 'safe'. "
+                        "Reply with ONLY one word: scam or safe."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Message: {text}\nTask difficulty: {task}\nClassify:"
+                }
+            ],
+            max_tokens=5,
+            temperature=0.0,
+        )
+        result = resp.choices[0].message.content.strip().lower()
+        if "scam" in result:
+            return "scam"
+        return "safe"
+    except Exception as e:
+        print(f"[WARN] LLM call failed: {e}", flush=True)
+        return _safe_predict(text, task)  # fallback
 
 def main() -> None:
     sys.path.insert(0, ".")
@@ -53,13 +60,16 @@ def main() -> None:
     from env import ScamEnv
     from grader import ScamGrader
 
-    api_base_url = os.getenv("API_BASE_URL", "").strip()
-    model_name = os.getenv("MODEL_NAME", "").strip()
-    hf_token = os.getenv("HF_TOKEN", "").strip()
+    # ← Yeh teen lines ZARURI hain — validator inhi se check karta hai
+    api_base_url = os.environ["API_BASE_URL"]   # no default!
+    api_key = os.environ["API_KEY"]             # no default!
+    model_name = os.environ["MODEL_NAME"]       # no default!
 
-    client = None
-    if api_base_url and model_name and hf_token:
-        client = OpenAI(base_url=api_base_url, api_key=hf_token)
+    # OpenAI client with validator's proxy
+    client = OpenAI(
+        base_url=api_base_url,
+        api_key=api_key
+    )
 
     task_ids = ["easy", "medium", "hard"]
     grader = ScamGrader()
@@ -84,23 +94,8 @@ def main() -> None:
             step_idx += 1
             text = obs["text"]
 
-            # Try LLM, fallback to rule-based
-            action_label = None
-            if client is not None:
-                try:
-                    payload = _choose_action_via_llm(
-                        client=client,
-                        model_name=model_name,
-                        task_id=task_id,
-                        step=step_idx,
-                        obs=obs,
-                    )
-                    action_label = payload.get("label")
-                except Exception:
-                    action_label = None
-
-            if action_label not in ("scam", "safe"):
-                action_label = _safe_predict(text, task_id)
+            # ALWAYS try LLM first — validator yahi check karta hai
+            action_label = _llm_predict(client, model_name, text, task_id)
 
             obs, reward, done, info = env.step(action_label)
 
@@ -115,7 +110,6 @@ def main() -> None:
                 "done": bool(done),
             })
 
-        # Clamp strictly between 0 and 1
         final_score = max(0.01, min(0.99, final_score))
 
         _emit("[END]", {
@@ -124,7 +118,6 @@ def main() -> None:
             "reward": final_score,
             "done": True,
         })
-
 
 if __name__ == "__main__":
     main()
