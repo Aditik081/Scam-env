@@ -1,9 +1,12 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class Observation(BaseModel):
     text: str
-    has_link: bool
-    has_urgent_words: bool
+    task: str
 
 class Action(BaseModel):
-    action: str
+    label: str  # "scam" or "safe"
+
+class Reward(BaseModel):
+    score: float

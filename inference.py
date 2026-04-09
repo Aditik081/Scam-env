@@ -1,188 +1,130 @@
+import json
 import os
-import traceback
-from fastapi import FastAPI
-from openai import OpenAI
-from env import ScamEnv
-
-# -------- FASTAPI APP --------
-app = FastAPI()
-
-# -------- ENV VARIABLES --------
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-API_KEY = os.getenv("API_KEY", "dummy-key")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-
-# -------- OPENAI CLIENT --------
-try:
-    client = OpenAI(
-        base_url=API_BASE_URL,
-        api_key=API_KEY
-    )
-except Exception as e:
-    print(f"[ERROR] OpenAI client init failed: {e}", flush=True)
-    client = None
+import sys
+from typing import Any, Dict, List
 
 
-# -------- PROXY CHECK --------
-def proxy_check():
-    if client is None:
-        print("[WARN] client not initialized", flush=True)
-        return
-
-    try:
-        client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=1
-        )
-        print("[INFO] Proxy call success", flush=True)
-    except Exception as e:
-        print(f"[ERROR] proxy failed: {e}", flush=True)
+def _emit(tag: str, payload: Dict[str, Any]) -> None:
+    print(tag, json.dumps(payload, separators=(",", ":"), ensure_ascii=True))
 
 
-# -------- PREDICT FUNCTION --------
-def predict(text, task="easy"):
+def _safe_predict(text: str, task: str) -> str:
     text = text.lower()
-
     if task == "easy":
-        if any(word in text for word in ["win", "lottery", "gift", "free", "click"]):
+        if any(w in text for w in ["win", "lottery", "gift", "free", "click"]):
             return "scam"
         return "safe"
-
     elif task == "medium":
-        if any(word in text for word in ["kyc", "otp", "bank", "link", "update"]):
+        if any(w in text for w in ["kyc", "otp", "bank", "link", "update"]):
             return "scam"
         if "do not share" in text:
             return "safe"
         return "safe"
-
     elif task == "hard":
-        if any(word in text for word in ["money", "pay", "urgent", "refund", "arrest"]):
+        if any(w in text for w in ["money", "pay", "urgent", "refund", "arrest"]):
             return "scam"
         return "safe"
-
     return "safe"
 
 
-# -------- EPISODE RUNNER --------
-def run_episode(env):
-    obs = env.reset()
-    done = False
-    total_reward = 0
-    steps = 0
-    rewards_list = []
-
-    while not done and steps < 100:
-        try:
-            text = obs["text"]
-            task = obs.get("task", "easy")
-
-            prediction = predict(text, task)
-
-            obs, reward, done, _ = env.step(prediction)
-
-            steps += 1
-            total_reward += reward
-            rewards_list.append(f"{reward:.2f}")
-
-            print(
-                f"[STEP] step={steps} action={prediction} reward={reward:.2f} done={str(done).lower()} error=null",
-                flush=True
-            )
-
-        except Exception as e:
-            print(
-                f"[STEP] step={steps} action=none reward=0.10 done=true error={str(e)}",
-                flush=True
-            )
-            break
-
-    return total_reward, steps, rewards_list
+def _choose_action_via_llm(*, client, model_name, task_id, step, obs):
+    system = (
+        "You are a scam detection agent.\n"
+        "Return ONLY JSON with one action.\n"
+        '{"action_type":"classify","label":"scam|safe"}\n'
+    )
+    user = {"task_id": task_id, "step": step, "observation": obs}
+    resp = client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": json.dumps(user, ensure_ascii=True)},
+        ],
+        temperature=0.0,
+        response_format={"type": "json_object"},
+    )
+    return json.loads(resp.choices[0].message.content)
 
 
-# -------- HEALTH CHECK --------
-@app.get("/")
-def health():
-    return {"status": "running"}
+def main() -> None:
+    sys.path.insert(0, ".")
 
+    from openai import OpenAI
+    from env import ScamEnv
+    from grader import ScamGrader
 
-# -------- RESET --------
-@app.post("/reset")
-def reset_env():
-    return {"status": "success"}
+    api_base_url = os.getenv("API_BASE_URL", "").strip()
+    model_name = os.getenv("MODEL_NAME", "").strip()
+    hf_token = os.getenv("HF_TOKEN", "").strip()
 
+    client = None
+    if api_base_url and model_name and hf_token:
+        client = OpenAI(base_url=api_base_url, api_key=hf_token)
 
-# -------- RUN TASK (API MODE) --------
-@app.get("/run_task")
-def run_task_endpoint():
-    try:
-        print("[START] task=scam-detection", flush=True)
+    task_ids = ["easy", "medium", "hard"]
+    grader = ScamGrader()
 
+    for task_id in task_ids:
         env = ScamEnv()
-        total_reward = 0
-        total_steps = 0
-        total_rewards_list = []
+        obs = env.reset(task=task_id)
+        max_steps = env.max_steps
 
-        proxy_check()
+        _emit("[START]", {
+            "task_id": task_id,
+            "max_steps": max_steps,
+            "reward_range": [0.0, 1.0],
+        })
 
-        for i in range(6):
-            ep_reward, ep_steps, rewards_list = run_episode(env)
-            total_reward += ep_reward
-            total_steps += ep_steps
-            total_rewards_list.extend(rewards_list)
+        step_idx = 0
+        done = False
+        final_score = 0.5
+        info = {}
 
-        rewards_str = ",".join(total_rewards_list)
+        while not done and step_idx < max_steps:
+            step_idx += 1
+            text = obs["text"]
 
-        print(
-            f"[END] success=true steps={total_steps} rewards={rewards_str}",
-            flush=True
-        )
+            # Try LLM, fallback to rule-based
+            action_label = None
+            if client is not None:
+                try:
+                    payload = _choose_action_via_llm(
+                        client=client,
+                        model_name=model_name,
+                        task_id=task_id,
+                        step=step_idx,
+                        obs=obs,
+                    )
+                    action_label = payload.get("label")
+                except Exception:
+                    action_label = None
 
-        return {"status": "END"}
+            if action_label not in ("scam", "safe"):
+                action_label = _safe_predict(text, task_id)
 
-    except Exception as e:
-        print(f"[ERROR] {e}", flush=True)
-        print(f"[END] success=true steps=0 rewards=0.10", flush=True)
-        return {"status": "ERROR"}
+            obs, reward, done, info = env.step(action_label)
 
+            grade_fn = getattr(grader, task_id)
+            final_score = float(grade_fn(action_label, obs, info))
 
-# -------- CLI ENTRY (VALIDATOR MODE) --------
-def main():
-    try:
-        tasks = ["easy", "medium", "hard"]
+            _emit("[STEP]", {
+                "task_id": task_id,
+                "step": step_idx,
+                "action": action_label,
+                "reward": final_score,
+                "done": bool(done),
+            })
 
-        for task_name in tasks:
-            print(f"[START] task=scam-{task_name} env=ScamEnv model={MODEL_NAME}", flush=True)
+        # Clamp strictly between 0 and 1
+        final_score = max(0.01, min(0.99, final_score))
 
-            env = ScamEnv()
-            total_reward = 0
-            total_steps = 0
-            total_rewards_list = []
-
-            proxy_check()
-
-            for i in range(5):
-                ep_reward, ep_steps, rewards_list = run_episode(env)
-
-                total_reward += ep_reward
-                total_steps += ep_steps
-                total_rewards_list.extend(rewards_list)
-
-            rewards_str = ",".join(total_rewards_list)
-
-            print(
-                f"[END] success=true steps={total_steps} rewards={rewards_str}",
-                flush=True
-            )
-
-    except Exception as e:
-        print(f"[ERROR] {e}", flush=True)
-        print(
-            f"[END] success=true steps=0 rewards=0.10",
-            flush=True
-        )
+        _emit("[END]", {
+            "task_id": task_id,
+            "score": final_score,
+            "reward": final_score,
+            "done": True,
+        })
 
 
-# -------- ENTRY POINT --------
 if __name__ == "__main__":
     main()
