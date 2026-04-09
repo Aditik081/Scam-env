@@ -48,7 +48,7 @@ class ScamEnv:
 
         correct_actual = self.current_data["actual"]
 
-        reward = 1.0 if prediction == correct_actual else 0.0
+        reward = 0.9 if prediction == correct_actual else 0.1
         done = self.current_step >= self.max_steps
 
         for_task = [x for x in self.data if x["task"] == self.current_task]
