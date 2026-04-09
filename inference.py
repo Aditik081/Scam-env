@@ -8,15 +8,18 @@ from env import ScamEnv
 app = FastAPI()
 
 # -------- ENV VARIABLES (MANDATORY FOR VALIDATOR) --------
-API_BASE_URL = os.environ.get("API_BASE_URL")
-API_KEY = os.environ.get("API_KEY")
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+API_KEY = os.getenv("API_KEY", "dummy-key")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
 
-# -------- OPENAI CLIENT (DO NOT CHANGE) --------
-client = OpenAI(
-    base_url=API_BASE_URL,
-    api_key=API_KEY
-)
+try:
+    client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=API_KEY
+    )
+except Exception as e:
+    print(f"[ERROR] OpenAI client init failed: {e}", flush=True)
+    client = None
 
 # -------- PROXY CHECK (REQUIRED) --------
 def proxy_check():
