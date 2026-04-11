@@ -43,12 +43,20 @@ class ScamEnv:
             "task": self.current_task
         }
 
-    def step(self, prediction: str) -> Tuple[Dict, float, bool, Dict]:
+    def step(self, prediction: str):
         self.current_step += 1
 
         correct_actual = self.current_data["actual"]
 
-        reward = 0.9 if prediction == correct_actual else 0.1
+        #  safer reward
+        if prediction == correct_actual:
+            reward = 0.85
+        else:
+            reward = 0.15
+
+        # clamp
+        reward = max(0.05, min(0.95, reward))
+
         done = self.current_step >= self.max_steps
 
         for_task = [x for x in self.data if x["task"] == self.current_task]

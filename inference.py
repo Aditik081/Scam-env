@@ -91,6 +91,15 @@ def main() -> None:
             action_label = _llm_predict(client, model_name, text, task_id)
             obs, reward, done, info = env.step(action_label)
 
+            
+            # 🔥 DEBUG PRINT ADD HERE
+            print("DEBUG:", {
+                "task": task_id,
+                "prediction": action_label,
+                "actual": info.get("actual"),
+                "env_reward": reward
+            })
+                        
             grade_fn = getattr(grader, task_id)
             step_score = float(grade_fn(action_label, obs, info))
             all_scores.append(step_score)
