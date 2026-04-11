@@ -61,11 +61,10 @@ def main() -> None:
     from grader import ScamGrader
 
     # ← Yeh teen lines ZARURI hain — validator inhi se check karta hai
-    api_base_url = os.environ["API_BASE_URL"]   # no default!
-    api_key = os.environ["API_KEY"]             # no default!
-    model_name = os.environ["MODEL_NAME"]       # no default!
-
-    # OpenAI client with validator's proxy
+    api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+    api_key = os.getenv("API_KEY", "dummy-key")
+    model_name = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+        # OpenAI client with validator's proxy
     client = OpenAI(
         base_url=api_base_url,
         api_key=api_key
