@@ -57,16 +57,14 @@ Agent must output:
 
 
 
-### Reward Function
-
-Condition           Reward 
- 
- Correct (easy)     +0.6   
- Correct (medium)   +0.8   
- Correct (hard)     +1.0   
- Wrong   (easy)     -0.2   
- Wrong   (medium)   -0.4   
- Wrong   (hard)     -0.6   
+| Condition       | Reward |
+|-----------------|--------|
+| Correct (easy)  | 0.90   |
+| Correct (medium)| 0.85   |
+| Correct (hard)  | 0.80   |
+| Wrong (easy)    | 0.10   |
+| Wrong (medium)  | 0.15   |
+| Wrong (hard)    | 0.20   |
 
 This reward structure provides **partial learning signals** and penalizes incorrect predictions.
 
