@@ -1,7 +1,7 @@
 import json
 import os
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 def _emit(tag: str, payload: Dict[str, Any]) -> None:
     print(tag, json.dumps(payload, separators=(",", ":"), ensure_ascii=True))
@@ -51,7 +51,7 @@ def _llm_predict(client, model_name: str, text: str, task: str) -> str:
         return "safe"
     except Exception as e:
         print(f"[WARN] LLM call failed: {e}", flush=True)
-        return _safe_predict(text, task)  # fallback
+        return _safe_predict(text, task)
 
 def main() -> None:
     sys.path.insert(0, ".")
@@ -60,15 +60,11 @@ def main() -> None:
     from env import ScamEnv
     from grader import ScamGrader
 
-    # ← Yeh teen lines ZARURI hain — validator inhi se check karta hai
     api_base_url = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
     api_key = os.getenv("API_KEY", "dummy-key")
     model_name = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-        # OpenAI client with validator's proxy
-    client = OpenAI(
-        base_url=api_base_url,
-        api_key=api_key
-    )
+
+    client = OpenAI(base_url=api_base_url, api_key=api_key)
 
     task_ids = ["easy", "medium", "hard"]
     grader = ScamGrader()
@@ -86,29 +82,29 @@ def main() -> None:
 
         step_idx = 0
         done = False
-        final_score = 0.5
-        info = {}
+        all_scores: List[float] = []   # ← collect all step scores
 
         while not done and step_idx < max_steps:
             step_idx += 1
             text = obs["text"]
 
-            # ALWAYS try LLM first — validator yahi check karta hai
             action_label = _llm_predict(client, model_name, text, task_id)
-
             obs, reward, done, info = env.step(action_label)
 
             grade_fn = getattr(grader, task_id)
-            final_score = float(grade_fn(action_label, obs, info))
+            step_score = float(grade_fn(action_label, obs, info))
+            all_scores.append(step_score)
 
             _emit("[STEP]", {
                 "task_id": task_id,
                 "step": step_idx,
                 "action": action_label,
-                "reward": final_score,
+                "reward": step_score,
                 "done": bool(done),
             })
 
+        # Average score — mix of 0.85/0.15 ensures never exactly 0 or 1
+        final_score = sum(all_scores) / len(all_scores) if all_scores else 0.5
         final_score = max(0.01, min(0.99, final_score))
 
         _emit("[END]", {
