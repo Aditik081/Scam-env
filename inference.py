@@ -92,13 +92,7 @@ def main() -> None:
             obs, reward, done, info = env.step(action_label)
 
             
-            # 🔥 DEBUG PRINT ADD HERE
-            print("DEBUG:", {
-                "task": task_id,
-                "prediction": action_label,
-                "actual": info.get("actual"),
-                "env_reward": reward
-            })
+          
                         
             grade_fn = getattr(grader, task_id)
             step_score = float(grade_fn(action_label, obs, info))
