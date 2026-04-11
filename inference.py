@@ -77,7 +77,7 @@ def main() -> None:
         _emit("[START]", {
             "task_id": task_id,
             "max_steps": max_steps,
-            "reward_range": [0, 1],
+            
         })
 
         step_idx = 0
