@@ -90,7 +90,15 @@ def main() -> None:
 
                 # grader score — strictly (0,1)
                 grade_fn = getattr(grader, task_id)
-                grader_score = float(grade_fn(action_label, obs, info))
+                score = float(grade_fn(action_label, obs, info))
+
+                # ensure strictly (0,1)
+                if score <= 0:
+                    score = 0.001
+                elif score >= 1:
+                    score = 0.999
+
+                grader_score = score
                 grader_scores.append(grader_score)
 
                 # [STEP] mein env_reward jaata hai (0.00 ya 1.00 bhi chalega)
@@ -112,7 +120,7 @@ def main() -> None:
                 break
 
         # [END] mein grader scores jaate hain — strictly (0,1)
-        rewards_str = ",".join(f"{r:.2f}" for r in grader_scores)
+        rewards_str = ",".join(f"{min(0.999, max(0.001, r)):.3f}" for r in grader_scores)
         print(f"[END] success=true steps={step_idx} rewards={rewards_str}", flush=True)
 
 
