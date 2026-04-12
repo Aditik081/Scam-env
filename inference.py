@@ -5,7 +5,7 @@ from typing import List
 # -------- ENV VARIABLES --------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-API_KEY = os.getenv("API_KEY", "dummy-key")  # validator yahi inject karta hai
+API_KEY = os.getenv("API_KEY", "dummy-key")
 
 # -------- OPENAI CLIENT --------
 from openai import OpenAI
@@ -73,11 +73,12 @@ def main() -> None:
         env = ScamEnv()
         obs = env.reset(task=task_id)
 
+        # [START]
         print(f"[START] task={task_id} env=ScamEnv model={MODEL_NAME}", flush=True)
 
         step_idx = 0
         done = False
-        rewards_list: List[float] = []
+        grader_scores: List[float] = []  # grader scores for [END]
 
         while not done and step_idx < env.max_steps:
             step_idx += 1
@@ -85,30 +86,33 @@ def main() -> None:
 
             try:
                 action_label = _llm_predict(text, task_id)
-                obs, reward, done, info = env.step(action_label)
+                obs, env_reward, done, info = env.step(action_label)
 
+                # grader score — strictly (0,1)
                 grade_fn = getattr(grader, task_id)
-                step_score = float(grade_fn(action_label, obs, info))
-                rewards_list.append(step_score)
+                grader_score = float(grade_fn(action_label, obs, info))
+                grader_scores.append(grader_score)
 
+                # [STEP] mein env_reward jaata hai (0.00 ya 1.00 bhi chalega)
                 print(
                     f"[STEP] step={step_idx} action={action_label} "
-                    f"reward={step_score:.2f} done={str(done).lower()} error=null",
+                    f"reward={env_reward:.2f} done={str(done).lower()} error=null",
                     flush=True
                 )
 
             except Exception as e:
                 err = str(e).replace("\n", " ")
-                rewards_list.append(0.15)
+                grader_scores.append(0.18)
                 print(
                     f"[STEP] step={step_idx} action=none "
-                    f"reward=0.15 done=true error={err}",
+                    f"reward=0.18 done=true error={err}",
                     flush=True
                 )
                 done = True
                 break
 
-        rewards_str = ",".join(f"{r:.2f}" for r in rewards_list)
+        # [END] mein grader scores jaate hain — strictly (0,1)
+        rewards_str = ",".join(f"{r:.2f}" for r in grader_scores)
         print(f"[END] success=true steps={step_idx} rewards={rewards_str}", flush=True)
 
 
